@@ -6,6 +6,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { AuthModal } from "@/components/auth-modal";
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { CollegeSelector } from "@/components/college-selector";
 import { Search } from "lucide-react"; // Import Search component
 
@@ -19,11 +20,16 @@ export function Header() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">G</span>
-              </div>
-              <span className="font-bold text-xl text-foreground">goatai</span>
+            <Link href="/" className="flex items-center hover:opacity-80 transition-opacity">
+              <span className="font-bold text-2xl text-foreground tracking-tight leading-tight">goatai</span>
+              <Image
+                src="/logo.png"
+                alt="GOATAI Logo"
+                width={56}
+                height={56}
+                className="h-14 w-auto object-contain flex-shrink-0 -ml-1"
+                priority
+              />
             </Link>
 
             {/* Desktop Navigation */}
