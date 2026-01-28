@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 const footerLinks = {
   product: [
@@ -32,10 +33,14 @@ export function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
           {/* Logo & Description */}
           <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="flex items-center gap-2 mb-4">
-              <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">G</span>
-              </div>
+            <Link href="/" className="flex items-center mb-4">
+              <Image
+                src="/logo.png"
+                alt="GOATAI Logo"
+                width={48}
+                height={48}
+                className="h-12 w-auto object-contain flex-shrink-0 -mr-1"
+              />
               <span className="font-bold text-xl text-foreground">goatai</span>
             </Link>
             <p className="text-sm text-muted-foreground">
