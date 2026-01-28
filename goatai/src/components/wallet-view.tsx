@@ -11,6 +11,7 @@ type WalletResponse = {
   positions: Array<{
     id: string;
     amount: number;
+    payout?: number | null;
     status: "OPEN" | "WON" | "LOST" | "REFUNDED";
     createdAt: string;
     market: { id: string; title: string; status: "OPEN" | "RESOLVED" | "CANCELED"; resolutionAt: string; resolvedAt: string | null };
@@ -123,6 +124,12 @@ export function WalletView() {
                         <div className="text-sm text-muted-foreground">
                           Outcome: <span className="text-foreground">{p.outcome.label}</span> · Stake:{" "}
                           <span className="text-foreground">{p.amount}</span> karma
+                          {p.market.status === "RESOLVED" && typeof p.payout === "number" && (
+                            <>
+                              {" "}
+                              · Payout: <span className="text-foreground">{p.payout}</span> karma
+                            </>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">

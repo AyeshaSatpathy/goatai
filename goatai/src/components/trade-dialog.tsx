@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,13 @@ export function TradeDialog({ open, onOpenChange, market, onTraded }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [odds, setOdds] = useState<
+    | null
+    | {
+        totalPool: number;
+        totals: Array<{ outcomeId: string; amount: number; count: number }>;
+      }
+  >(null);
 
   const canTrade = useMemo(() => {
     if (!isAuthed) return false;
@@ -45,12 +52,39 @@ export function TradeDialog({ open, onOpenChange, market, onTraded }: Props) {
     return true;
   }, [isAuthed, market, selectedOutcomeId, amount]);
 
+  useEffect(() => {
+    const run = async () => {
+      if (!open || !market) return;
+      try {
+        const res = await fetch(`/api/markets/${market.id}/stats`);
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return;
+        setOdds({ totalPool: json.totalPool ?? 0, totals: json.totals ?? [] });
+      } catch {}
+    };
+    run();
+  }, [open, market?.id]);
+
+  const selectedTotals = useMemo(() => {
+    if (!odds || !selectedOutcomeId) return null;
+    const outcomePool = odds.totals.find((t) => t.outcomeId === selectedOutcomeId)?.amount ?? 0;
+    const pool = odds.totalPool ?? 0;
+    const n = Number(amount);
+    if (!Number.isFinite(n) || n <= 0) return { pool, outcomePool, implied: pool > 0 ? outcomePool / pool : 0, estPayout: null };
+    // If your outcome wins, estimated payout under pari-mutuel after your trade:
+    // payout ≈ (stake / (winnerPool + stake)) * (totalPool + stake)
+    const estPayout = Math.floor((n / (outcomePool + n)) * (pool + n));
+    const implied = pool > 0 ? outcomePool / pool : 0;
+    return { pool, outcomePool, implied, estPayout };
+  }, [odds, selectedOutcomeId, amount]);
+
   const reset = () => {
     setSelectedOutcomeId("");
     setAmount("");
     setIsSubmitting(false);
     setError(null);
     setSuccess(null);
+    setOdds(null);
   };
 
   const handleClose = (nextOpen: boolean) => {
@@ -156,6 +190,31 @@ export function TradeDialog({ open, onOpenChange, market, onTraded }: Props) {
                   disabled={!isAuthed || isSubmitting}
                 />
               </div>
+
+              {selectedTotals && (
+                <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Implied odds</span>
+                    <span className="font-medium text-foreground">
+                      {Math.round(selectedTotals.implied * 100)}%
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-muted-foreground">Pool (before)</span>
+                    <span className="font-medium text-foreground">{selectedTotals.pool}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-muted-foreground">Outcome pool (before)</span>
+                    <span className="font-medium text-foreground">{selectedTotals.outcomePool}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-border">
+                    <span className="text-muted-foreground">Estimated payout if you win</span>
+                    <span className="font-semibold text-foreground">
+                      {selectedTotals.estPayout === null ? "—" : `${selectedTotals.estPayout} karma`}
+                    </span>
+                  </div>
+                </div>
+              )}
             </>
           )}
 

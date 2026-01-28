@@ -19,6 +19,12 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       _count: { _all: true },
     });
 
+    const totalPool = totals.reduce((sum, t) => sum + (t._sum.amount ?? 0), 0);
+    const probabilities = totals.map((t) => ({
+      outcomeId: t.outcomeId,
+      probability: totalPool > 0 ? (t._sum.amount ?? 0) / totalPool : 0,
+    }));
+
     let myPositions: Array<{
       id: string;
       amount: number;
@@ -45,6 +51,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
         amount: t._sum.amount ?? 0,
         count: t._count._all,
       })),
+      totalPool,
+      probabilities,
       myPositions,
       canResolve: Boolean(user && market.creatorId === user.id && market.status === "OPEN"),
     });

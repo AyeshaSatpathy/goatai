@@ -22,7 +22,43 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json(markets);
+    // Add lightweight odds/totals for list rendering
+    const marketIds = markets.map((m) => m.id);
+    const grouped = marketIds.length
+      ? await prisma.position.groupBy({
+          by: ["marketId", "outcomeId"],
+          where: { marketId: { in: marketIds } },
+          _sum: { amount: true },
+        })
+      : [];
+
+    const totalsByMarket = new Map<string, Map<string, number>>();
+    const poolByMarket = new Map<string, number>();
+
+    for (const row of grouped) {
+      const mId = row.marketId;
+      const oId = row.outcomeId;
+      const amt = row._sum.amount ?? 0;
+      if (!totalsByMarket.has(mId)) totalsByMarket.set(mId, new Map());
+      totalsByMarket.get(mId)!.set(oId, amt);
+      poolByMarket.set(mId, (poolByMarket.get(mId) ?? 0) + amt);
+    }
+
+    const withOdds = markets.map((m) => {
+      const pool = poolByMarket.get(m.id) ?? 0;
+      const byOutcome = totalsByMarket.get(m.id) ?? new Map<string, number>();
+      const odds = m.outcomes.map((o) => {
+        const amt = byOutcome.get(o.id) ?? 0;
+        return {
+          outcomeId: o.id,
+          amount: amt,
+          probability: pool > 0 ? amt / pool : 0,
+        };
+      });
+      return { ...m, totalPool: pool, odds };
+    });
+
+    return NextResponse.json(withOdds);
   } catch (error) {
     console.error("[GET /api/markets] Error:", error);
     return NextResponse.json({ error: "Failed to load markets" }, { status: 500 });

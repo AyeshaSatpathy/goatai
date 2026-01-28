@@ -131,6 +131,7 @@ model Position {
   id        String         @id @default(cuid())
   amount    Int
   status    PositionStatus @default(OPEN)
+  payout    Int?           // credited on resolve (odds-based)
 
   userId    String
   user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
