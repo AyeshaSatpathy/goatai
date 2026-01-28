@@ -28,6 +28,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     let myPositions: Array<{
       id: string;
       amount: number;
+      payout: number | null;
       status: string;
       outcomeId: string;
       createdAt: Date;
@@ -40,7 +41,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     if (user) {
       myPositions = await prisma.position.findMany({
         where: { marketId, userId: user.id },
-        select: { id: true, amount: true, status: true, outcomeId: true, createdAt: true },
+        select: { id: true, amount: true, payout: true, status: true, outcomeId: true, createdAt: true },
         orderBy: { createdAt: "desc" },
       });
     }
