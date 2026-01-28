@@ -4,7 +4,8 @@ import { prisma } from "@/lib/prisma";
 
 // Resolution rules (MVP):
 // - Only creator can resolve
-// - Winners get 2x their stake credited (stake was already deducted at trade time)
+// - Pari-mutuel payout: winners split the total pool proportional to their stake.
+//   Stake was already deducted at trade time, so we credit the payout on resolve.
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
     const sessionResult = await auth.api.getSession({
@@ -46,13 +47,11 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       select: { id: true, userId: true, outcomeId: true, amount: true },
     });
 
-    const winnerByUser = new Map<string, number>();
     const winners = positions.filter((p) => p.outcomeId === outcomeId);
     const losers = positions.filter((p) => p.outcomeId !== outcomeId);
 
-    for (const p of winners) {
-      winnerByUser.set(p.userId, (winnerByUser.get(p.userId) ?? 0) + p.amount * 2);
-    }
+    const totalPool = positions.reduce((sum, p) => sum + p.amount, 0);
+    const winnerPool = winners.reduce((sum, p) => sum + p.amount, 0);
 
     await prisma.$transaction(async (tx) => {
       await tx.market.update({
@@ -64,20 +63,43 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         },
       });
 
-      if (winners.length) {
-        await tx.position.updateMany({
-          where: { id: { in: winners.map((p) => p.id) } },
-          data: { status: "WON" },
-        });
+      // If no one bet on the winning outcome, refund everyone.
+      if (totalPool > 0 && winnerPool === 0) {
+        // Refund all open positions
+        for (const p of positions) {
+          await tx.position.update({
+            where: { id: p.id },
+            data: { status: "REFUNDED", payout: p.amount },
+          });
+          await tx.user.update({
+            where: { id: p.userId },
+            data: { karmaBalance: { increment: p.amount } },
+          });
+        }
+        return;
       }
+
+      // Mark losers (no payout)
       if (losers.length) {
         await tx.position.updateMany({
           where: { id: { in: losers.map((p) => p.id) } },
-          data: { status: "LOST" },
+          data: { status: "LOST", payout: 0 },
         });
       }
 
-      for (const [userId, credit] of winnerByUser.entries()) {
+      // Pay winners proportional to stake. We round down each payout, and any remainder stays unallocated (MVP).
+      const payoutByUser = new Map<string, number>();
+      for (const p of winners) {
+        const payout = winnerPool === 0 ? 0 : Math.floor((p.amount / winnerPool) * totalPool);
+        await tx.position.update({
+          where: { id: p.id },
+          data: { status: "WON", payout },
+        });
+        payoutByUser.set(p.userId, (payoutByUser.get(p.userId) ?? 0) + payout);
+      }
+
+      for (const [userId, credit] of payoutByUser.entries()) {
+        if (credit <= 0) continue;
         await tx.user.update({
           where: { id: userId },
           data: { karmaBalance: { increment: credit } },
@@ -91,5 +113,6 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     return NextResponse.json({ error: "Failed to resolve market" }, { status: 500 });
   }
 }
+
 
 

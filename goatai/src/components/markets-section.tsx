@@ -18,6 +18,8 @@ type Market = {
   stakePoints?: number | null;
   collegeId?: string | null;
   outcomes: Array<{ id: string; label: string; position: number }>;
+  totalPool?: number;
+  odds?: Array<{ outcomeId: string; amount: number; probability: number }>;
 };
 
 export function MarketsSection() {
@@ -131,6 +133,8 @@ export function MarketsSection() {
                   outcomes={m.outcomes}
                   resolutionAt={m.resolutionAt}
                   stakePoints={m.stakePoints ?? null}
+                  odds={m.odds}
+                  totalPool={m.totalPool}
                 />
                 <div className="grid grid-cols-2 gap-2">
                   <Link href={`/markets/${m.id}`}>

@@ -22,6 +22,8 @@ type Market = {
 
 type Stats = {
   totals: Array<{ outcomeId: string; amount: number; count: number }>;
+  totalPool: number;
+  probabilities: Array<{ outcomeId: string; probability: number }>;
   myPositions: Array<{ id: string; amount: number; status: string; outcomeId: string; createdAt: string }>;
   canResolve: boolean;
 };
@@ -49,6 +51,12 @@ export function MarketDetail({ marketId }: { marketId: string }) {
     for (const t of stats?.totals ?? []) map.set(t.outcomeId, { amount: t.amount, count: t.count });
     return map;
   }, [stats?.totals]);
+
+  const probByOutcome = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const p of stats?.probabilities ?? []) map.set(p.outcomeId, p.probability);
+    return map;
+  }, [stats?.probabilities]);
 
   const load = async () => {
     try {
@@ -178,6 +186,7 @@ export function MarketDetail({ marketId }: { marketId: string }) {
               {market.outcomes.map((o) => {
                 const t = totalsByOutcome.get(o.id) ?? { amount: 0, count: 0 };
                 const isWinner = market.status === "RESOLVED" && market.resolvedOutcomeId === o.id;
+                const pct = Math.round((probByOutcome.get(o.id) ?? 0) * 100);
                 return (
                   <div
                     key={o.id}
@@ -197,7 +206,7 @@ export function MarketDetail({ marketId }: { marketId: string }) {
                       )}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {t.amount} karma · {t.count} trades
+                      {pct}% · {t.amount} karma · {t.count} trades
                     </div>
                   </div>
                 );
