@@ -4,15 +4,22 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AuthModal } from "@/components/auth-modal";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LogOut, User } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { CollegeSelector } from "@/components/college-selector";
 import { Search } from "lucide-react"; // Import Search component
+import { useAuth } from "@/components/auth-provider";
+import { signOut } from "@/lib/auth-client";
 
 export function Header() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { session, isLoading } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
 
   return (
     <>
@@ -58,16 +65,49 @@ export function Header() {
             <div className="hidden md:flex items-center gap-3">
               <CollegeSelector variant="header" />
               <ThemeToggle />
-              <Button
-                variant="ghost"
-                className="text-sm"
-                onClick={() => setIsAuthOpen(true)}
-              >
-                Log In
-              </Button>
-              <Button className="text-sm font-semibold" onClick={() => setIsAuthOpen(true)}>
-                Sign Up
-              </Button>
+              {session?.user ? (
+                <>
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted">
+                    {session.user.image ? (
+                      <Image
+                        src={session.user.image}
+                        alt={session.user.name || "User"}
+                        width={24}
+                        height={24}
+                        className="rounded-full"
+                      />
+                    ) : (
+                      <User className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    <span className="text-sm font-medium text-foreground">
+                      {session.user.name || session.user.email}
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSignOut}
+                    className="text-sm"
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sign Out
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="ghost"
+                    className="text-sm"
+                    onClick={() => setIsAuthOpen(true)}
+                    disabled={isLoading}
+                  >
+                    Log In
+                  </Button>
+                  <Button className="text-sm font-semibold" onClick={() => setIsAuthOpen(true)} disabled={isLoading}>
+                    Sign Up
+                  </Button>
+                </>
+              )}
             </div>
 
             {/* Mobile Menu Button */}
@@ -111,27 +151,61 @@ export function Header() {
               >
                 Leaderboard
               </Link>
-              <div className="pt-3 border-t border-border flex gap-2">
-                <Button
-                  variant="outline"
-                  className="flex-1 bg-transparent"
-                  onClick={() => {
-                    setIsAuthOpen(true);
-                    setIsMobileMenuOpen(false);
-                  }}
-                >
-                  Log In
-                </Button>
-                <Button
-                  className="flex-1"
-                  onClick={() => {
-                    setIsAuthOpen(true);
-                    setIsMobileMenuOpen(false);
-                  }}
-                >
-                  Sign Up
-                </Button>
-              </div>
+              {session?.user ? (
+                <div className="pt-3 border-t border-border space-y-2">
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted">
+                    {session.user.image ? (
+                      <Image
+                        src={session.user.image}
+                        alt={session.user.name || "User"}
+                        width={24}
+                        height={24}
+                        className="rounded-full"
+                      />
+                    ) : (
+                      <User className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    <span className="text-sm font-medium text-foreground">
+                      {session.user.name || session.user.email}
+                    </span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full bg-transparent"
+                    onClick={() => {
+                      handleSignOut();
+                      setIsMobileMenuOpen(false);
+                    }}
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sign Out
+                  </Button>
+                </div>
+              ) : (
+                <div className="pt-3 border-t border-border flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1 bg-transparent"
+                    onClick={() => {
+                      setIsAuthOpen(true);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    disabled={isLoading}
+                  >
+                    Log In
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={() => {
+                      setIsAuthOpen(true);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    disabled={isLoading}
+                  >
+                    Sign Up
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         )}
