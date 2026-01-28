@@ -51,6 +51,11 @@ export function MarketsSection() {
   };
 
   useEffect(() => {
+    if (!collegeId) {
+      setMarkets([]);
+      setIsLoading(false);
+      return;
+    }
     loadMarkets();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [collegeId]);
@@ -104,7 +109,11 @@ export function MarketsSection() {
           </div>
         )}
 
-        {isLoading ? (
+        {!collegeId ? (
+          <div className="text-center text-muted-foreground">
+            Please select a campus to view markets.
+          </div>
+        ) : isLoading ? (
           <div className="text-center text-muted-foreground">Loading markets…</div>
         ) : markets.length === 0 ? (
           <div className="text-center text-muted-foreground">
@@ -128,7 +137,7 @@ export function MarketsSection() {
                     setSelectedMarket(m);
                     setIsTradeOpen(true);
                   }}
-                  disabled={!session?.user}
+                  disabled={!session?.user || !collegeId}
                 >
                   Trade
                 </Button>

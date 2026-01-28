@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { CollegeSelector } from "@/components/college-selector";
+import { getCollegeById } from "@/lib/colleges";
 
 type WalletResponse = {
-  user: { id: string; name: string | null; email: string; image: string | null; karmaBalance: number };
+  user: { id: string; name: string | null; email: string; image: string | null; karmaBalance: number; campusId?: string | null };
   positions: Array<{
     id: string;
     amount: number;
@@ -80,6 +82,23 @@ export function WalletView() {
           </div>
         ) : (
           <>
+            <div className="rounded-xl border border-border bg-card p-6 mb-6">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <div className="text-sm text-muted-foreground mb-1">Campus</div>
+                  <div className="text-xl font-bold text-foreground">
+                    {getCollegeById(data.user.campusId)?.name ?? "Not selected"}
+                  </div>
+                </div>
+                <div className="w-full md:w-[360px]">
+                  <CollegeSelector />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-3">
+                You can change your campus anytime — it’s saved to your profile.
+              </p>
+            </div>
+
             <div className="rounded-xl border border-border bg-card p-6 mb-8">
               <div className="text-sm text-muted-foreground mb-1">Karma balance</div>
               <div className="text-4xl font-bold text-foreground">{data.user.karmaBalance}</div>

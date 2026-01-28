@@ -1,28 +1,9 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
-
-export interface College {
-  id: string;
-  name: string;
-  shortName: string;
-  logo?: string;
-}
-
-export const colleges: College[] = [
-  { id: "stanford", name: "Stanford University", shortName: "Stanford" },
-  { id: "mit", name: "Massachusetts Institute of Technology", shortName: "MIT" },
-  { id: "harvard", name: "Harvard University", shortName: "Harvard" },
-  { id: "berkeley", name: "UC Berkeley", shortName: "Berkeley" },
-  { id: "ucla", name: "UCLA", shortName: "UCLA" },
-  { id: "umich", name: "University of Michigan", shortName: "Michigan" },
-  { id: "utexas", name: "University of Texas at Austin", shortName: "UT Austin" },
-  { id: "gatech", name: "Georgia Institute of Technology", shortName: "Georgia Tech" },
-  { id: "usc", name: "University of Southern California", shortName: "USC" },
-  { id: "nyu", name: "New York University", shortName: "NYU" },
-  { id: "columbia", name: "Columbia University", shortName: "Columbia" },
-  { id: "cornell", name: "Cornell University", shortName: "Cornell" },
-];
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import type { College } from "@/lib/colleges";
+import { getCollegeById } from "@/lib/colleges";
+import { useAuth } from "@/components/auth-provider";
 
 interface CollegeContextType {
   selectedCollege: College | null;
@@ -33,6 +14,35 @@ const CollegeContext = createContext<CollegeContextType | undefined>(undefined);
 
 export function CollegeProvider({ children }: { children: ReactNode }) {
   const [selectedCollege, setSelectedCollege] = useState<College | null>(null);
+  const { session } = useAuth();
+
+  // Initialize from localStorage (fast), then hydrate from server if signed in.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("goatai:campusId");
+      const c = getCollegeById(saved);
+      if (c) setSelectedCollege(c);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    const run = async () => {
+      if (!session?.user) return;
+      try {
+        const res = await fetch("/api/me");
+        const json = await res.json().catch(() => ({}));
+        const campusId = json?.user?.campusId as string | undefined;
+        const c = getCollegeById(campusId);
+        if (c) {
+          setSelectedCollege(c);
+          try {
+            localStorage.setItem("goatai:campusId", c.id);
+          } catch {}
+        }
+      } catch {}
+    };
+    run();
+  }, [session?.user]);
 
   return (
     <CollegeContext.Provider value={{ selectedCollege, setSelectedCollege }}>

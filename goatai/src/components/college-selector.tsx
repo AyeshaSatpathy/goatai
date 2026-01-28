@@ -17,11 +17,34 @@ import {
 } from "@/components/ui/popover";
 import { Check, ChevronsUpDown, GraduationCap } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useCollege, colleges } from "@/components/college-context";
+import { useCollege } from "@/components/college-context";
+import { colleges } from "@/lib/colleges";
+import { useAuth } from "@/components/auth-provider";
 
-export function CollegeSelector({ variant = "default" }: { variant?: "default" | "header" }) {
+export function CollegeSelector({
+  variant = "default",
+  persist = true,
+}: {
+  variant?: "default" | "header";
+  persist?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const { selectedCollege, setSelectedCollege } = useCollege();
+  const { session } = useAuth();
+
+  const persistCampus = async (collegeId: string) => {
+    if (!persist) return;
+    try {
+      localStorage.setItem("goatai:campusId", collegeId);
+    } catch {}
+    if (session?.user) {
+      await fetch("/api/me/campus", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campusId: collegeId }),
+      }).catch(() => {});
+    }
+  };
 
   if (variant === "header") {
     return (
@@ -52,6 +75,7 @@ export function CollegeSelector({ variant = "default" }: { variant?: "default" |
                     value={college.name}
                     onSelect={() => {
                       setSelectedCollege(college);
+                      persistCampus(college.id);
                       setOpen(false);
                     }}
                   >
@@ -105,6 +129,7 @@ export function CollegeSelector({ variant = "default" }: { variant?: "default" |
                   value={college.name}
                   onSelect={() => {
                     setSelectedCollege(college);
+                    persistCampus(college.id);
                     setOpen(false);
                   }}
                 >
