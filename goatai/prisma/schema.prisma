@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -93,6 +93,10 @@ model Market {
   status       MarketStatus @default(OPEN)
   resolvedAt   DateTime?
   resolvedOutcomeId String?
+  // Settlement audit fields (filled on resolution)
+  totalPool    Int?
+  winnerPool   Int?
+  payoutRemainder Int?
 
   creatorId String
   creator   User       @relation(fields: [creatorId], references: [id], onDelete: Cascade)

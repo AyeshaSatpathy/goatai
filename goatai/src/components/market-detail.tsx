@@ -16,6 +16,9 @@ type Market = {
   status: "OPEN" | "RESOLVED" | "CANCELED";
   creatorId: string;
   resolvedOutcomeId?: string | null;
+  totalPool?: number | null;
+  winnerPool?: number | null;
+  payoutRemainder?: number | null;
   outcomes: Array<{ id: string; label: string; position: number }>;
   creator: { id: string; name: string | null; email: string; image: string | null };
 };
@@ -24,7 +27,7 @@ type Stats = {
   totals: Array<{ outcomeId: string; amount: number; count: number }>;
   totalPool: number;
   probabilities: Array<{ outcomeId: string; probability: number }>;
-  myPositions: Array<{ id: string; amount: number; status: string; outcomeId: string; createdAt: string }>;
+  myPositions: Array<{ id: string; amount: number; payout: number | null; status: string; outcomeId: string; createdAt: string }>;
   canResolve: boolean;
 };
 
@@ -250,7 +253,15 @@ export function MarketDetail({ marketId }: { marketId: string }) {
                       <div key={p.id} className="flex items-center justify-between rounded-lg border border-border px-4 py-3 bg-background">
                         <div>
                           <div className="text-sm font-medium text-foreground">{outcomeLabel}</div>
-                          <div className="text-xs text-muted-foreground">{p.amount} karma</div>
+                          <div className="text-xs text-muted-foreground">
+                            Stake: {p.amount} karma
+                            {market.status === "RESOLVED" && typeof p.payout === "number" && (
+                              <>
+                                {" "}
+                                · Payout: <span className="text-foreground">{p.payout}</span>
+                              </>
+                            )}
+                          </div>
                         </div>
                         <div className={cn("text-xs font-semibold", statusColor)}>{p.status}</div>
                       </div>
@@ -259,6 +270,60 @@ export function MarketDetail({ marketId }: { marketId: string }) {
                 </div>
               )}
             </div>
+
+            {market.status === "RESOLVED" && (
+              <div className="rounded-xl border border-border bg-card p-6">
+                <h2 className="text-lg font-semibold text-foreground mb-2">Payout breakdown</h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Winners split the total pool proportional to stake. Rounding remainder is distributed fairly.
+                </p>
+
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="rounded-lg border border-border bg-background p-3">
+                    <div className="text-xs text-muted-foreground">Total pool</div>
+                    <div className="text-lg font-semibold text-foreground">
+                      {market.totalPool ?? stats?.totalPool ?? 0}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-border bg-background p-3">
+                    <div className="text-xs text-muted-foreground">Winner pool</div>
+                    <div className="text-lg font-semibold text-foreground">
+                      {market.winnerPool ?? "—"}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-border bg-background p-3">
+                    <div className="text-xs text-muted-foreground">Remainder</div>
+                    <div className="text-lg font-semibold text-foreground">
+                      {market.payoutRemainder ?? 0}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {market.outcomes.map((o) => {
+                    const t = totalsByOutcome.get(o.id) ?? { amount: 0, count: 0 };
+                    const pct = Math.round((probByOutcome.get(o.id) ?? 0) * 100);
+                    const isWinner = market.resolvedOutcomeId === o.id;
+                    return (
+                      <div
+                        key={o.id}
+                        className={cn(
+                          "flex items-center justify-between rounded-lg border px-4 py-3 bg-background",
+                          isWinner ? "border-green-600/40" : "border-border"
+                        )}
+                      >
+                        <div className="text-sm font-medium text-foreground">
+                          {o.label} {isWinner && <span className="ml-2 text-xs text-green-700 dark:text-green-300">WINNER</span>}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {pct}% · {t.amount} karma
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {stats?.canResolve && (
               <div className="rounded-xl border border-border bg-card p-6">

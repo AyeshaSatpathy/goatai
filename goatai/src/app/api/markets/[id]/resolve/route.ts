@@ -60,6 +60,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
           status: "RESOLVED",
           resolvedAt: now,
           resolvedOutcomeId: outcomeId,
+          totalPool,
+          winnerPool,
         },
       });
 
@@ -76,6 +78,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
             data: { karmaBalance: { increment: p.amount } },
           });
         }
+        await tx.market.update({
+          where: { id: marketId },
+          data: { payoutRemainder: 0 },
+        });
         return;
       }
 
@@ -87,16 +93,58 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         });
       }
 
-      // Pay winners proportional to stake. We round down each payout, and any remainder stays unallocated (MVP).
+      // Pay winners proportional to stake, and distribute rounding remainder fairly:
+      // - base payout = floor(stake * totalPool / winnerPool)
+      // - remainder is distributed +1 to positions with the largest fractional parts,
+      //   tie-broken by position id for determinism.
+      type WinnerCalc = {
+        id: string;
+        userId: string;
+        stake: number;
+        base: number;
+        remainderNumerator: number; // (stake*totalPool) % winnerPool
+      };
+
+      const winnerCalcs: WinnerCalc[] = winners.map((p) => {
+        const numer = p.amount * totalPool;
+        const base = Math.floor(numer / winnerPool);
+        const rem = numer % winnerPool;
+        return { id: p.id, userId: p.userId, stake: p.amount, base, remainderNumerator: rem };
+      });
+
+      const sumBase = winnerCalcs.reduce((s, w) => s + w.base, 0);
+      let remainder = totalPool - sumBase;
+      if (remainder < 0) remainder = 0;
+
+      // Sort by fractional remainder desc, then id asc (deterministic)
+      const sorted = winnerCalcs
+        .slice()
+        .sort((a, b) => {
+          if (b.remainderNumerator !== a.remainderNumerator) return b.remainderNumerator - a.remainderNumerator;
+          return a.id.localeCompare(b.id);
+        });
+
+      const extraByPositionId = new Map<string, number>();
+      for (let i = 0; i < remainder; i++) {
+        const w = sorted[i % sorted.length];
+        extraByPositionId.set(w.id, (extraByPositionId.get(w.id) ?? 0) + 1);
+      }
+
       const payoutByUser = new Map<string, number>();
-      for (const p of winners) {
-        const payout = winnerPool === 0 ? 0 : Math.floor((p.amount / winnerPool) * totalPool);
+      for (const w of winnerCalcs) {
+        const extra = extraByPositionId.get(w.id) ?? 0;
+        const payout = w.base + extra;
         await tx.position.update({
-          where: { id: p.id },
+          where: { id: w.id },
           data: { status: "WON", payout },
         });
-        payoutByUser.set(p.userId, (payoutByUser.get(p.userId) ?? 0) + payout);
+        payoutByUser.set(w.userId, (payoutByUser.get(w.userId) ?? 0) + payout);
       }
+
+      await tx.market.update({
+        where: { id: marketId },
+        data: { payoutRemainder: remainder },
+      });
 
       for (const [userId, credit] of payoutByUser.entries()) {
         if (credit <= 0) continue;
