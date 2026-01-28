@@ -48,6 +48,12 @@ export function Header() {
                 Markets
               </Link>
               <Link
+                href="/wallet"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Wallet
+              </Link>
+              <Link
                 href="#how-it-works"
                 className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
@@ -83,6 +89,11 @@ export function Header() {
                       {session.user.name || session.user.email}
                     </span>
                   </div>
+                  <Link href="/wallet">
+                    <Button variant="outline" size="sm" className="bg-transparent">
+                      Karma
+                    </Button>
+                  </Link>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -138,6 +149,12 @@ export function Header() {
                 className="block text-sm font-medium text-muted-foreground hover:text-foreground"
               >
                 Markets
+              </Link>
+              <Link
+                href="/wallet"
+                className="block text-sm font-medium text-muted-foreground hover:text-foreground"
+              >
+                Wallet
               </Link>
               <Link
                 href="#how-it-works"
