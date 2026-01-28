@@ -17,11 +17,13 @@ model User {
   email         String    @unique
   emailVerified Boolean   @default(false)
   image         String?
+  karmaBalance  Int       @default(1000)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
   accounts      Account[]
   markets       Market[]
+  positions     Position[]
 }
 
 model Session {
@@ -70,6 +72,12 @@ model Verification {
   @@unique([identifier, value])
 }
 
+enum MarketStatus {
+  OPEN
+  RESOLVED
+  CANCELED
+}
+
 // Prediction markets created by students
 model Market {
   id           String     @id @default(cuid())
@@ -81,11 +89,15 @@ model Market {
   stakePoints  Int?
   // Optional simple college identifier to scope markets (e.g. "stanford", "mit")
   collegeId    String?
+  status       MarketStatus @default(OPEN)
+  resolvedAt   DateTime?
+  resolvedOutcomeId String?
 
   creatorId String
   creator   User       @relation(fields: [creatorId], references: [id], onDelete: Cascade)
 
   outcomes  Outcome[]
+  positions Position[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -102,7 +114,37 @@ model Outcome {
 
   marketId String
   market   Market  @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  positions Position[]
 
   @@index([marketId])
+}
+
+enum PositionStatus {
+  OPEN
+  WON
+  LOST
+  REFUNDED
+}
+
+model Position {
+  id        String         @id @default(cuid())
+  amount    Int
+  status    PositionStatus @default(OPEN)
+
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  marketId  String
+  market    Market         @relation(fields: [marketId], references: [id], onDelete: Cascade)
+
+  outcomeId String
+  outcome   Outcome        @relation(fields: [outcomeId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([marketId])
+  @@index([outcomeId])
 }
 

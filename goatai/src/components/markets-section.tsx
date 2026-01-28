@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useCollege } from "@/components/college-context";
 import { CreateMarketDialog } from "@/components/create-market-dialog";
 import { useAuth } from "@/components/auth-provider";
+import { TradeDialog } from "@/components/trade-dialog";
 
 type Market = {
   id: string;
@@ -26,6 +27,8 @@ export function MarketsSection() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isTradeOpen, setIsTradeOpen] = useState(false);
+  const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
 
   const collegeId = selectedCollege?.id;
 
@@ -110,15 +113,26 @@ export function MarketsSection() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {markets.map((m) => (
-              <MarketCard
-                key={m.id}
-                id={m.id}
-                title={m.title}
-                description={m.description}
-                outcomes={m.outcomes}
-                resolutionAt={m.resolutionAt}
-                stakePoints={m.stakePoints ?? null}
-              />
+              <div key={m.id} className="space-y-2">
+                <MarketCard
+                  id={m.id}
+                  title={m.title}
+                  description={m.description}
+                  outcomes={m.outcomes}
+                  resolutionAt={m.resolutionAt}
+                  stakePoints={m.stakePoints ?? null}
+                />
+                <Button
+                  className="w-full font-semibold"
+                  onClick={() => {
+                    setSelectedMarket(m);
+                    setIsTradeOpen(true);
+                  }}
+                  disabled={!session?.user}
+                >
+                  Trade
+                </Button>
+              </div>
             ))}
           </div>
         )}
@@ -140,6 +154,13 @@ export function MarketsSection() {
         onOpenChange={setIsCreateOpen}
         collegeId={collegeId}
         onCreated={loadMarkets}
+      />
+
+      <TradeDialog
+        open={isTradeOpen}
+        onOpenChange={setIsTradeOpen}
+        market={selectedMarket}
+        onTraded={loadMarkets}
       />
     </section>
   );
