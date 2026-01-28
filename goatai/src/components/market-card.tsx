@@ -30,12 +30,21 @@ export function MarketCard({
   const resolutionLabel = Number.isNaN(resolution.getTime())
     ? "—"
     : resolution.toLocaleString();
+  const isDetermined =
+    !Number.isNaN(resolution.getTime()) && Date.now() >= resolution.getTime();
 
   return (
     <div
       onClick={onClick}
       className="group bg-card border border-border rounded-xl p-5 hover:border-primary/50 hover:shadow-lg transition-all cursor-pointer"
     >
+      {isDetermined && (
+        <div className="mb-3">
+          <span className="inline-flex text-xs font-semibold px-2.5 py-1 rounded-full border border-green-600/30 bg-green-500/10 text-green-700 dark:text-green-300">
+            DETERMINED
+          </span>
+        </div>
+      )}
       <h3 className="font-semibold text-foreground mb-2 line-clamp-2 group-hover:text-primary transition-colors">
         {title}
       </h3>

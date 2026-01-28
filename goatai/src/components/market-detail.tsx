@@ -46,6 +46,13 @@ export function MarketDetail({ marketId }: { marketId: string }) {
     return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString();
   }, [market?.resolutionAt]);
 
+  const isDetermined = useMemo(() => {
+    if (!market?.resolutionAt) return false;
+    const d = new Date(market.resolutionAt);
+    if (Number.isNaN(d.getTime())) return false;
+    return Date.now() >= d.getTime();
+  }, [market?.resolutionAt]);
+
   const totalsByOutcome = useMemo(() => {
     const map = new Map<string, { amount: number; count: number }>();
     for (const t of stats?.totals ?? []) map.set(t.outcomeId, { amount: t.amount, count: t.count });
@@ -149,6 +156,13 @@ export function MarketDetail({ marketId }: { marketId: string }) {
             <Link href="/#markets" className="text-sm text-muted-foreground hover:text-foreground">
               ← Back to markets
             </Link>
+            {isDetermined && (
+              <div className="inline-flex">
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-full border border-green-600/30 bg-green-500/10 text-green-700 dark:text-green-300">
+                  DETERMINED
+                </span>
+              </div>
+            )}
             <h1 className="text-3xl font-bold text-foreground">{market.title}</h1>
             <p className="text-muted-foreground">{market.description}</p>
 
