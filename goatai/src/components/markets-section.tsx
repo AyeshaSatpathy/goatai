@@ -5,6 +5,7 @@ import { MarketCard } from "@/components/market-card";
 import { CollegeSelector } from "@/components/college-selector";
 import { Button } from "@/components/ui/button";
 import { useCollege } from "@/components/college-context";
+import Link from "next/link";
 import { CreateMarketDialog } from "@/components/create-market-dialog";
 import { useAuth } from "@/components/auth-provider";
 import { TradeDialog } from "@/components/trade-dialog";
@@ -131,16 +132,23 @@ export function MarketsSection() {
                   resolutionAt={m.resolutionAt}
                   stakePoints={m.stakePoints ?? null}
                 />
-                <Button
-                  className="w-full font-semibold"
-                  onClick={() => {
-                    setSelectedMarket(m);
-                    setIsTradeOpen(true);
-                  }}
-                  disabled={!session?.user || !collegeId}
-                >
-                  Trade
-                </Button>
+                <div className="grid grid-cols-2 gap-2">
+                  <Link href={`/markets/${m.id}`}>
+                    <Button variant="outline" className="w-full bg-transparent font-semibold">
+                      View
+                    </Button>
+                  </Link>
+                  <Button
+                    className="w-full font-semibold"
+                    onClick={() => {
+                      setSelectedMarket(m);
+                      setIsTradeOpen(true);
+                    }}
+                    disabled={!session?.user || !collegeId}
+                  >
+                    Trade
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
