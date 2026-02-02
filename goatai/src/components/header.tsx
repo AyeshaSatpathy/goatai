@@ -1,25 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AuthModal } from "@/components/auth-modal";
-import { Menu, X, LogOut, User } from "lucide-react";
+import { Menu, X, LogOut, User, Wallet, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { CollegeSelector } from "@/components/college-selector";
-import { Search } from "lucide-react"; // Import Search component
 import { useAuth } from "@/components/auth-provider";
 import { signOut } from "@/lib/auth-client";
 
 export function Header() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const { session, isLoading } = useAuth();
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleSignOut = async () => {
+    setIsProfileDropdownOpen(false);
     await signOut();
   };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsProfileDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <>
@@ -72,8 +86,11 @@ export function Header() {
               <CollegeSelector variant="header" />
               <ThemeToggle />
               {session?.user ? (
-                <>
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted">
+                <div className="relative" ref={dropdownRef}>
+                  <button
+                    onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted hover:bg-muted/80 transition-colors"
+                  >
                     {session.user.image ? (
                       <Image
                         src={session.user.image}
@@ -88,22 +105,39 @@ export function Header() {
                     <span className="text-sm font-medium text-foreground">
                       {session.user.name || session.user.email}
                     </span>
-                  </div>
-                  <Link href="/wallet">
-                    <Button variant="outline" size="sm" className="bg-transparent">
-                      Karma
-                    </Button>
-                  </Link>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleSignOut}
-                    className="text-sm"
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Sign Out
-                  </Button>
-                </>
+                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isProfileDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {isProfileDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-48 rounded-lg border border-border bg-card shadow-lg py-1 z-50">
+                      <Link
+                        href={`/profile/${session.user.id}`}
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                      >
+                        <User className="h-4 w-4" />
+                        View Profile
+                      </Link>
+                      <Link
+                        href="/wallet"
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                      >
+                        <Wallet className="h-4 w-4" />
+                        Wallet
+                      </Link>
+                      <div className="border-t border-border my-1" />
+                      <button
+                        onClick={handleSignOut}
+                        className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-muted transition-colors w-full"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        Sign Out
+                      </button>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <>
                   <Button
@@ -170,33 +204,58 @@ export function Header() {
               </Link>
               {session?.user ? (
                 <div className="pt-3 border-t border-border space-y-2">
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted">
+                  {/* User info */}
+                  <div className="flex items-center gap-2 px-3 py-2">
                     {session.user.image ? (
                       <Image
                         src={session.user.image}
                         alt={session.user.name || "User"}
-                        width={24}
-                        height={24}
+                        width={32}
+                        height={32}
                         className="rounded-full"
                       />
                     ) : (
-                      <User className="h-4 w-4 text-muted-foreground" />
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User className="h-4 w-4 text-primary" />
+                      </div>
                     )}
-                    <span className="text-sm font-medium text-foreground">
-                      {session.user.name || session.user.email}
-                    </span>
+                    <div>
+                      <div className="text-sm font-medium text-foreground">
+                        {session.user.name || session.user.email}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {session.user.email}
+                      </div>
+                    </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    className="w-full bg-transparent"
+
+                  {/* Menu items */}
+                  <Link
+                    href={`/profile/${session.user.id}`}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted rounded-md transition-colors"
+                  >
+                    <User className="h-4 w-4" />
+                    View Profile
+                  </Link>
+                  <Link
+                    href="/wallet"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted rounded-md transition-colors"
+                  >
+                    <Wallet className="h-4 w-4" />
+                    Wallet
+                  </Link>
+                  <button
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-muted rounded-md transition-colors w-full"
                     onClick={() => {
                       handleSignOut();
                       setIsMobileMenuOpen(false);
                     }}
                   >
-                    <LogOut className="h-4 w-4 mr-2" />
+                    <LogOut className="h-4 w-4" />
                     Sign Out
-                  </Button>
+                  </button>
                 </div>
               ) : (
                 <div className="pt-3 border-t border-border flex gap-2">

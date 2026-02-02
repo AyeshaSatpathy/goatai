@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Trophy, TrendingUp, Medal, Loader2 } from "lucide-react";
 import { useCollege } from "@/components/college-context";
 import Image from "next/image";
+import Link from "next/link";
 
 type LeaderboardUser = {
   rank: number;
@@ -128,8 +129,9 @@ export function LeaderboardSection() {
             ) : (
               <div className="divide-y divide-border">
                 {leaders.map((trader) => (
-                  <div
+                  <Link
                     key={trader.id}
+                    href={`/profile/${trader.id}`}
                     className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors"
                   >
                     {/* Rank */}
@@ -175,7 +177,7 @@ export function LeaderboardSection() {
                         {Math.round(trader.winRate * 100)}% win rate
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
