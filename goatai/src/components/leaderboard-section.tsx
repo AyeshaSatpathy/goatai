@@ -1,47 +1,25 @@
-import { Trophy, TrendingUp, Medal } from "lucide-react";
+"use client";
 
-const topTraders = [
-  {
-    rank: 1,
-    name: "Alex M.",
-    school: "Stanford",
-    profit: "+$2,847",
-    winRate: "72%",
-    avatar: "A",
-  },
-  {
-    rank: 2,
-    name: "Sarah K.",
-    school: "MIT",
-    profit: "+$2,234",
-    winRate: "68%",
-    avatar: "S",
-  },
-  {
-    rank: 3,
-    name: "Jordan P.",
-    school: "Berkeley",
-    profit: "+$1,892",
-    winRate: "65%",
-    avatar: "J",
-  },
-  {
-    rank: 4,
-    name: "Chris L.",
-    school: "UCLA",
-    profit: "+$1,567",
-    winRate: "61%",
-    avatar: "C",
-  },
-  {
-    rank: 5,
-    name: "Maya R.",
-    school: "NYU",
-    profit: "+$1,234",
-    winRate: "59%",
-    avatar: "M",
-  },
-];
+import { useEffect, useState } from "react";
+import { Trophy, TrendingUp, Medal, Loader2 } from "lucide-react";
+import { useCollege } from "@/components/college-context";
+import Image from "next/image";
+
+type LeaderboardUser = {
+  rank: number;
+  id: string;
+  name: string;
+  image: string | null;
+  campusId: string | null;
+  karmaBalance: number;
+  totalTrades: number;
+  wins: number;
+  losses: number;
+  winRate: number;
+  totalStaked: number;
+  totalPayout: number;
+  profit: number;
+};
 
 function getRankIcon(rank: number) {
   if (rank === 1) return <Trophy className="h-5 w-5 text-yellow-500" />;
@@ -50,7 +28,43 @@ function getRankIcon(rank: number) {
   return <span className="text-sm font-bold text-muted-foreground">{rank}</span>;
 }
 
+function formatProfit(profit: number) {
+  if (profit >= 0) return `+${profit}`;
+  return `${profit}`;
+}
+
 export function LeaderboardSection() {
+  const { selectedCollege } = useCollege();
+  const [leaders, setLeaders] = useState<LeaderboardUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const qs = selectedCollege ? `?collegeId=${selectedCollege.id}&limit=10` : "?limit=10";
+        const res = await fetch(`/api/leaderboard${qs}`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data?.error || "Failed to load leaderboard");
+        }
+
+        setLeaders(data);
+      } catch (e) {
+        console.error(e);
+        setError("Could not load leaderboard");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    load();
+  }, [selectedCollege]);
+
   return (
     <section id="leaderboard" className="py-16 md:py-24 bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -92,44 +106,79 @@ export function LeaderboardSection() {
             <div className="p-6 border-b border-border">
               <h3 className="font-semibold text-foreground flex items-center gap-2">
                 <Trophy className="h-5 w-5 text-primary" />
-                Top Predictors This Week
+                Top Predictors
+                {selectedCollege && (
+                  <span className="text-sm font-normal text-muted-foreground ml-1">
+                    @ {selectedCollege.shortName}
+                  </span>
+                )}
               </h3>
             </div>
 
-            <div className="divide-y divide-border">
-              {topTraders.map((trader) => (
-                <div
-                  key={trader.rank}
-                  className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors"
-                >
-                  {/* Rank */}
-                  <div className="w-8 flex justify-center">
-                    {getRankIcon(trader.rank)}
-                  </div>
-
-                  {/* Avatar */}
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
-                    {trader.avatar}
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-foreground">{trader.name}</div>
-                    <div className="text-sm text-muted-foreground">{trader.school}</div>
-                  </div>
-
-                  {/* Stats */}
-                  <div className="text-right">
-                    <div className="font-semibold text-green-600 dark:text-green-400">
-                      {trader.profit}
+            {isLoading ? (
+              <div className="flex items-center justify-center p-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : error ? (
+              <div className="p-6 text-center text-muted-foreground">{error}</div>
+            ) : leaders.length === 0 ? (
+              <div className="p-6 text-center text-muted-foreground">
+                No trades resolved yet. Be the first to make predictions!
+              </div>
+            ) : (
+              <div className="divide-y divide-border">
+                {leaders.map((trader) => (
+                  <div
+                    key={trader.id}
+                    className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors"
+                  >
+                    {/* Rank */}
+                    <div className="w-8 flex justify-center">
+                      {getRankIcon(trader.rank)}
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      {trader.winRate} win rate
+
+                    {/* Avatar */}
+                    {trader.image ? (
+                      <Image
+                        src={trader.image}
+                        alt={trader.name}
+                        width={40}
+                        height={40}
+                        className="rounded-full"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
+                        {trader.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-foreground truncate">{trader.name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {trader.totalTrades} trades · {trader.wins}W/{trader.losses}L
+                      </div>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="text-right">
+                      <div
+                        className={
+                          trader.profit >= 0
+                            ? "font-semibold text-green-600 dark:text-green-400"
+                            : "font-semibold text-red-600 dark:text-red-400"
+                        }
+                      >
+                        {formatProfit(trader.profit)} karma
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {Math.round(trader.winRate * 100)}% win rate
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
