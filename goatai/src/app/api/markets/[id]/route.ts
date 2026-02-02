@@ -9,7 +9,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       where: { id },
       include: {
         outcomes: { orderBy: { position: "asc" } },
-        creator: { select: { id: true, name: true, email: true, image: true } },
+        creator: { select: { id: true, name: true, image: true } },
       },
     });
 
