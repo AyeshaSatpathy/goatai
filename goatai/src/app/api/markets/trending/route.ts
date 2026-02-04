@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, rateLimits } from "@/lib/rate-limit";
 
 // Get trending markets based on recent activity
 export async function GET(req: NextRequest) {
   try {
+    // Rate limit by IP for public endpoints
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0] || "anonymous";
+    const rateLimit = checkRateLimit(ip, rateLimits.general);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429 }
+      );
+    }
+
     const { searchParams } = new URL(req.url);
     const collegeId = searchParams.get("collegeId") || undefined;
     const limit = Math.min(Number(searchParams.get("limit")) || 5, 20);

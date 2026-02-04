@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, rateLimits } from "@/lib/rate-limit";
 
 // Get price/odds history for a market over time
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
+    // Rate limit by IP for public endpoints
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0] || "anonymous";
+    const rateLimit = checkRateLimit(ip, rateLimits.general);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429 }
+      );
+    }
+
     const { id: marketId } = await ctx.params;
 
     const market = await prisma.market.findUnique({
