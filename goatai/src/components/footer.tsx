@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 
 const footerLinks = {
   product: [
@@ -34,14 +33,10 @@ export function Footer() {
           {/* Logo & Description */}
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center mb-4">
-              <Image
-                src="/logo.png"
-                alt="GOATAI Logo"
-                width={48}
-                height={48}
-                className="h-12 w-auto object-contain flex-shrink-0 -mr-1"
-              />
-              <span className="font-bold text-xl text-foreground">goatai</span>
+              <span className="text-xl text-foreground tracking-tight">
+                <span className="font-semibold">hunch</span>
+                <span className="text-primary font-bold">.</span>
+              </span>
             </Link>
             <p className="text-sm text-muted-foreground">
               The prediction market built for college students.
@@ -119,7 +114,7 @@ export function Footer() {
 
         <div className="border-t border-border mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-muted-foreground">
-            © 2026 goatai. All rights reserved.
+            © 2026 Hunch. All rights reserved.
           </p>
           <p className="text-sm text-muted-foreground">
             Made with ❤️ for college students

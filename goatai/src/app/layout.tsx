@@ -8,7 +8,7 @@ import './globals.css'
 const geist = Geist({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'goatai - Campus Prediction Markets',
+  title: 'Hunch - Campus Prediction Markets',
   description: 'Predict the future of your campus. Trade on outcomes that matter to college students.',
   generator: 'v0.app',
   icons: {

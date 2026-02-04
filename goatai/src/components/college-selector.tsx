@@ -35,7 +35,7 @@ export function CollegeSelector({
   const persistCampus = async (collegeId: string) => {
     if (!persist) return;
     try {
-      localStorage.setItem("goatai:campusId", collegeId);
+      localStorage.setItem("hunch:campusId", collegeId);
     } catch {}
     if (session?.user) {
       await fetch("/api/me/campus", {

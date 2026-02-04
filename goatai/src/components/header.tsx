@@ -42,15 +42,10 @@ export function Header() {
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
             <Link href="/" className="flex items-center hover:opacity-80 transition-opacity">
-              <span className="font-bold text-2xl text-foreground tracking-tight leading-tight">goatai</span>
-              <Image
-                src="/logo.png"
-                alt="GOATAI Logo"
-                width={56}
-                height={56}
-                className="h-14 w-auto object-contain flex-shrink-0 -ml-1"
-                priority
-              />
+              <span className="text-2xl text-foreground tracking-tight">
+                <span className="font-semibold">hunch</span>
+                <span className="text-primary font-bold">.</span>
+              </span>
             </Link>
 
             {/* Desktop Navigation */}

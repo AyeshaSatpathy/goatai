@@ -50,22 +50,6 @@ export function HeroSection() {
                 Explore Markets
               </Button>
             </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-8 mt-16 max-w-lg mx-auto">
-              <div>
-                <div className="text-2xl md:text-3xl font-bold text-primary-foreground">10k+</div>
-                <div className="text-sm text-primary-foreground/60">Students</div>
-              </div>
-              <div>
-                <div className="text-2xl md:text-3xl font-bold text-primary-foreground">$50k</div>
-                <div className="text-sm text-primary-foreground/60">Volume</div>
-              </div>
-              <div>
-                <div className="text-2xl md:text-3xl font-bold text-primary-foreground">150+</div>
-                <div className="text-sm text-primary-foreground/60">Markets</div>
-              </div>
-            </div>
           </div>
         </div>
 

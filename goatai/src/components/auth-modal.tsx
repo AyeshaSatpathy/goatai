@@ -35,7 +35,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
         <div className="flex flex-col">
           <div className="p-6 space-y-6">
             <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold text-foreground">Welcome to goatai</h2>
+              <h2 className="text-2xl font-bold text-foreground">Welcome to Hunch</h2>
               <p className="text-sm text-muted-foreground">
                 Sign in to continue to your account
               </p>

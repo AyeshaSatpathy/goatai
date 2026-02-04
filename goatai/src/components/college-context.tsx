@@ -19,7 +19,7 @@ export function CollegeProvider({ children }: { children: ReactNode }) {
   // Initialize from localStorage (fast), then hydrate from server if signed in.
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("goatai:campusId");
+      const saved = localStorage.getItem("hunch:campusId");
       const c = getCollegeById(saved);
       if (c) setSelectedCollege(c);
     } catch {}
@@ -36,7 +36,7 @@ export function CollegeProvider({ children }: { children: ReactNode }) {
         if (c) {
           setSelectedCollege(c);
           try {
-            localStorage.setItem("goatai:campusId", c.id);
+            localStorage.setItem("hunch:campusId", c.id);
           } catch {}
         }
       } catch {}
