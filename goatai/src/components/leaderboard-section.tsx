@@ -12,7 +12,6 @@ type LeaderboardUser = {
   name: string;
   image: string | null;
   campusId: string | null;
-  karmaBalance: number;
   totalTrades: number;
   wins: number;
   losses: number;

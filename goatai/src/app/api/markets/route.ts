@@ -1,15 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { collegeIds } from "@/lib/colleges";
+import { checkRateLimit, rateLimits } from "@/lib/rate-limit";
+import { moderateMarket } from "@/lib/content-moderation";
+import { auditLog, getClientInfo } from "@/lib/audit-log";
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const collegeId = searchParams.get("collegeId") || undefined;
+    const statusParam = searchParams.get("status") || undefined;
+    const search = searchParams.get("search") || undefined;
+
+    // Validate status parameter
+    const validStatuses = ["OPEN", "RESOLVED", "CANCELED"] as const;
+    const status = statusParam && validStatuses.includes(statusParam as typeof validStatuses[number])
+      ? (statusParam as typeof validStatuses[number])
+      : undefined;
 
     const markets = await prisma.market.findMany({
       where: {
         collegeId,
+        ...(status && { status }),
+        ...(search && {
+          OR: [
+            { title: { contains: search, mode: "insensitive" } },
+            { description: { contains: search, mode: "insensitive" } },
+          ],
+        }),
       },
       include: {
         outcomes: {
@@ -78,6 +97,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Rate limiting (5 markets per hour)
+    const rateLimit = checkRateLimit(user.id, rateLimits.createMarket);
+    if (!rateLimit.success) {
+      const clientInfo = getClientInfo(req.headers);
+      auditLog({
+        action: "RATE_LIMIT_HIT",
+        userId: user.id,
+        metadata: { endpoint: "create-market", resetIn: rateLimit.resetIn },
+        ...clientInfo,
+      });
+      return NextResponse.json(
+        { error: `Too many markets created. Try again in ${Math.ceil(rateLimit.resetIn / 60)} minutes.` },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const {
       title,
@@ -95,6 +130,7 @@ export async function POST(req: NextRequest) {
       collegeId?: string | null;
     } = body;
 
+    // Validate required fields
     if (!title || !description || !resolutionAt) {
       return NextResponse.json(
         { error: "Title, description, and resolutionAt are required" },
@@ -102,9 +138,47 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!Array.isArray(outcomes) || outcomes.length < 2) {
+    // Validate input lengths
+    const MAX_TITLE_LENGTH = 200;
+    const MAX_DESCRIPTION_LENGTH = 2000;
+    const MAX_OUTCOME_LENGTH = 100;
+    const MAX_OUTCOMES = 10;
+
+    if (typeof title !== "string" || title.length > MAX_TITLE_LENGTH) {
       return NextResponse.json(
-        { error: "At least two outcomes are required" },
+        { error: `Title must be a string of max ${MAX_TITLE_LENGTH} characters` },
+        { status: 400 }
+      );
+    }
+
+    if (typeof description !== "string" || description.length > MAX_DESCRIPTION_LENGTH) {
+      return NextResponse.json(
+        { error: `Description must be a string of max ${MAX_DESCRIPTION_LENGTH} characters` },
+        { status: 400 }
+      );
+    }
+
+    if (!Array.isArray(outcomes) || outcomes.length < 2 || outcomes.length > MAX_OUTCOMES) {
+      return NextResponse.json(
+        { error: `Between 2 and ${MAX_OUTCOMES} outcomes are required` },
+        { status: 400 }
+      );
+    }
+
+    // Validate each outcome
+    for (const outcome of outcomes) {
+      if (typeof outcome !== "string" || outcome.length === 0 || outcome.length > MAX_OUTCOME_LENGTH) {
+        return NextResponse.json(
+          { error: `Each outcome must be a non-empty string of max ${MAX_OUTCOME_LENGTH} characters` },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate collegeId if provided
+    if (collegeId && !collegeIds.has(collegeId)) {
+      return NextResponse.json(
+        { error: "Invalid college ID" },
         { status: 400 }
       );
     }
@@ -113,6 +187,23 @@ export async function POST(req: NextRequest) {
     if (Number.isNaN(resolutionDate.getTime())) {
       return NextResponse.json(
         { error: "Invalid resolutionAt date/time" },
+        { status: 400 }
+      );
+    }
+
+    // Ensure resolution date is in the future
+    if (resolutionDate <= new Date()) {
+      return NextResponse.json(
+        { error: "Resolution date must be in the future" },
+        { status: 400 }
+      );
+    }
+
+    // Content moderation
+    const modResult = moderateMarket(title, description, outcomes);
+    if (!modResult.allowed) {
+      return NextResponse.json(
+        { error: modResult.reason || "Content not allowed" },
         { status: 400 }
       );
     }
@@ -137,6 +228,20 @@ export async function POST(req: NextRequest) {
           orderBy: { position: "asc" },
         },
       },
+    });
+
+    // Audit log
+    const clientInfo = getClientInfo(req.headers);
+    auditLog({
+      action: "MARKET_CREATED",
+      userId: user.id,
+      metadata: {
+        marketId: market.id,
+        title: market.title,
+        collegeId: market.collegeId,
+        outcomeCount: outcomes.length,
+      },
+      ...clientInfo,
     });
 
     return NextResponse.json(market, { status: 201 });

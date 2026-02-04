@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, rateLimits } from "@/lib/rate-limit";
+import { auditLog, getClientInfo } from "@/lib/audit-log";
 
 // Resolution rules (MVP):
 // - Only creator can resolve
@@ -14,6 +16,22 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
     const user = sessionResult?.user;
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    // Rate limiting
+    const rateLimit = checkRateLimit(user.id, rateLimits.resolveMarket);
+    if (!rateLimit.success) {
+      const clientInfo = getClientInfo(req.headers);
+      auditLog({
+        action: "RATE_LIMIT_HIT",
+        userId: user.id,
+        metadata: { endpoint: "resolve-market", resetIn: rateLimit.resetIn },
+        ...clientInfo,
+      });
+      return NextResponse.json(
+        { error: `Too many requests. Try again in ${rateLimit.resetIn} seconds.` },
+        { status: 429 }
+      );
+    }
 
     const { id: marketId } = await ctx.params;
     const body = await req.json();
@@ -153,6 +171,22 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
           data: { karmaBalance: { increment: credit } },
         });
       }
+    });
+
+    // Audit log
+    const clientInfo = getClientInfo(req.headers);
+    auditLog({
+      action: "MARKET_RESOLVED",
+      userId: user.id,
+      metadata: {
+        marketId,
+        winningOutcomeId: outcomeId,
+        totalPool,
+        winnerPool,
+        winnersCount: winners.length,
+        losersCount: losers.length,
+      },
+      ...clientInfo,
     });
 
     return NextResponse.json({ ok: true });

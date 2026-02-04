@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
         email: true,
         image: true,
         campusId: true,
-        karmaBalance: true,
+        // Note: NOT selecting karmaBalance - it's private
         positions: {
           where: {
             market: { status: "RESOLVED" },
@@ -42,7 +42,6 @@ export async function GET(req: NextRequest) {
             name: user.name || user.email.split("@")[0],
             image: user.image,
             campusId: user.campusId,
-            karmaBalance: user.karmaBalance,
             totalTrades: 0,
             wins: 0,
             losses: 0,
@@ -66,7 +65,6 @@ export async function GET(req: NextRequest) {
           name: user.name || user.email.split("@")[0],
           image: user.image,
           campusId: user.campusId,
-          karmaBalance: user.karmaBalance,
           totalTrades,
           wins,
           losses,

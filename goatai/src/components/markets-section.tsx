@@ -4,11 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import { MarketCard } from "@/components/market-card";
 import { CollegeSelector } from "@/components/college-selector";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useCollege } from "@/components/college-context";
 import Link from "next/link";
 import { CreateMarketDialog } from "@/components/create-market-dialog";
 import { useAuth } from "@/components/auth-provider";
 import { TradeDialog } from "@/components/trade-dialog";
+import { Search, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type Market = {
   id: string;
@@ -17,10 +20,13 @@ type Market = {
   resolutionAt: string;
   stakePoints?: number | null;
   collegeId?: string | null;
+  status: "OPEN" | "RESOLVED" | "CANCELED";
   outcomes: Array<{ id: string; label: string; position: number }>;
   totalPool?: number;
   odds?: Array<{ outcomeId: string; amount: number; probability: number }>;
 };
+
+type StatusFilter = "ALL" | "OPEN" | "RESOLVED";
 
 export function MarketsSection() {
   const { selectedCollege } = useCollege();
@@ -33,13 +39,32 @@ export function MarketsSection() {
   const [isTradeOpen, setIsTradeOpen] = useState(false);
   const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
 
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
   const collegeId = selectedCollege?.id;
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const loadMarkets = async () => {
     try {
       setError(null);
       setIsLoading(true);
-      const qs = collegeId ? `?collegeId=${encodeURIComponent(collegeId)}` : "";
+
+      const params = new URLSearchParams();
+      if (collegeId) params.set("collegeId", collegeId);
+      if (statusFilter !== "ALL") params.set("status", statusFilter);
+      if (debouncedSearch) params.set("search", debouncedSearch);
+
+      const qs = params.toString() ? `?${params.toString()}` : "";
       const res = await fetch(`/api/markets${qs}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to load markets");
@@ -61,7 +86,7 @@ export function MarketsSection() {
     }
     loadMarkets();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [collegeId]);
+  }, [collegeId, statusFilter, debouncedSearch]);
 
   const headerTitle = useMemo(() => {
     return selectedCollege ? `${selectedCollege.shortName} Markets` : "Markets";
@@ -103,6 +128,48 @@ export function MarketsSection() {
           <div className="max-w-md mx-auto mt-8">
             <CollegeSelector />
           </div>
+
+          {/* Search and Filter */}
+          {collegeId && (
+            <div className="mt-6 flex flex-col sm:flex-row gap-4 items-center justify-center">
+              {/* Search Input */}
+              <div className="relative w-full sm:w-80">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search markets..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 pr-10"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Status Filter */}
+              <div className="flex gap-1 bg-muted rounded-lg p-1">
+                {(["ALL", "OPEN", "RESOLVED"] as const).map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => setStatusFilter(status)}
+                    className={cn(
+                      "px-3 py-1.5 text-sm font-medium rounded-md transition-colors",
+                      statusFilter === status
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {status === "ALL" ? "All" : status === "OPEN" ? "Open" : "Resolved"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Markets Grid */}

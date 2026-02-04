@@ -42,6 +42,8 @@ export function MarketDetail({ marketId }: { marketId: string }) {
   const [resolveOutcomeId, setResolveOutcomeId] = useState<string>("");
   const [isResolving, setIsResolving] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
+  const [isCanceling, setIsCanceling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const resolutionLabel = useMemo(() => {
     if (!market?.resolutionAt) return "—";
@@ -123,6 +125,31 @@ export function MarketDetail({ marketId }: { marketId: string }) {
       console.error(e);
       setResolveError("Failed to resolve market");
       setIsResolving(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!confirm("Are you sure you want to cancel this market? All bets will be refunded.")) {
+      return;
+    }
+    try {
+      setCancelError(null);
+      setIsCanceling(true);
+      const res = await fetch(`/api/markets/${marketId}/cancel`, {
+        method: "POST",
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setCancelError(json?.error || "Failed to cancel market");
+        setIsCanceling(false);
+        return;
+      }
+      setIsCanceling(false);
+      await load();
+    } catch (e) {
+      console.error(e);
+      setCancelError("Failed to cancel market");
+      setIsCanceling(false);
     }
   };
 
@@ -361,6 +388,31 @@ export function MarketDetail({ marketId }: { marketId: string }) {
                   disabled={!resolveOutcomeId || isResolving}
                 >
                   {isResolving ? "Resolving..." : "Resolve"}
+                </Button>
+              </div>
+            )}
+
+            {/* Cancel Market - show for creator when market is OPEN */}
+            {stats?.canResolve && market.status === "OPEN" && (
+              <div className="rounded-xl border border-border bg-card p-6">
+                <h2 className="text-lg font-semibold text-foreground mb-2">Cancel market</h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Cancel this market and refund all bets. This action cannot be undone.
+                </p>
+
+                {cancelError && (
+                  <div className="mb-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                    {cancelError}
+                  </div>
+                )}
+
+                <Button
+                  variant="outline"
+                  className="w-full font-semibold text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={handleCancel}
+                  disabled={isCanceling}
+                >
+                  {isCanceling ? "Canceling..." : "Cancel & Refund All"}
                 </Button>
               </div>
             )}

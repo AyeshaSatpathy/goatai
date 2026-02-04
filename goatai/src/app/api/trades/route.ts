@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, rateLimits } from "@/lib/rate-limit";
+import { auditLog, getClientInfo } from "@/lib/audit-log";
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,11 +13,32 @@ export async function POST(req: NextRequest) {
     const user = sessionResult?.user;
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    // Rate limiting
+    const rateLimit = checkRateLimit(user.id, rateLimits.trade);
+    if (!rateLimit.success) {
+      const clientInfo = getClientInfo(req.headers);
+      auditLog({
+        action: "RATE_LIMIT_HIT",
+        userId: user.id,
+        metadata: { endpoint: "trade", resetIn: rateLimit.resetIn },
+        ...clientInfo,
+      });
+      return NextResponse.json(
+        { error: `Too many trades. Try again in ${rateLimit.resetIn} seconds.` },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const { marketId, outcomeId, amount }: { marketId: string; outcomeId: string; amount: number } = body;
 
-    if (!marketId || !outcomeId || !amount || amount <= 0) {
-      return NextResponse.json({ error: "marketId, outcomeId, and positive amount are required" }, { status: 400 });
+    // Validate amount: must be a positive integer, max 100,000 karma per trade
+    const MAX_TRADE_AMOUNT = 100_000;
+    if (!marketId || !outcomeId || typeof amount !== "number" || !Number.isInteger(amount) || amount <= 0) {
+      return NextResponse.json({ error: "marketId, outcomeId, and positive integer amount are required" }, { status: 400 });
+    }
+    if (amount > MAX_TRADE_AMOUNT) {
+      return NextResponse.json({ error: `Maximum trade amount is ${MAX_TRADE_AMOUNT} karma` }, { status: 400 });
     }
 
     const [market, me] = await Promise.all([
@@ -67,6 +90,20 @@ export async function POST(req: NextRequest) {
       });
 
       return { position, karmaBalance: updatedUser.karmaBalance };
+    });
+
+    // Audit log
+    const clientInfo = getClientInfo(req.headers);
+    auditLog({
+      action: "TRADE_PLACED",
+      userId: user.id,
+      metadata: {
+        marketId,
+        outcomeId,
+        amount,
+        positionId: result.position.id,
+      },
+      ...clientInfo,
     });
 
     return NextResponse.json(result, { status: 201 });
