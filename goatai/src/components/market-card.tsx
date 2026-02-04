@@ -1,6 +1,7 @@
 "use client";
 
-import { BarChart3, CalendarClock, Coins } from "lucide-react";
+import { BarChart3, Coins } from "lucide-react";
+import { CountdownTimer } from "@/components/countdown-timer";
 
 interface MarketCardProps {
   id?: string;
@@ -27,9 +28,6 @@ export function MarketCard({
 }: MarketCardProps) {
   const resolution =
     typeof resolutionAt === "string" ? new Date(resolutionAt) : resolutionAt;
-  const resolutionLabel = Number.isNaN(resolution.getTime())
-    ? "—"
-    : resolution.toLocaleString();
   const isDetermined =
     !Number.isNaN(resolution.getTime()) && Date.now() >= resolution.getTime();
 
@@ -98,10 +96,13 @@ export function MarketCard({
       )}
 
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <div className="flex items-center gap-1">
-          <CalendarClock className="h-3.5 w-3.5" />
-          <span>Resolves {resolutionLabel}</span>
-        </div>
+        {isDetermined ? (
+          <span className="text-amber-600 dark:text-amber-400 font-medium">
+            Awaiting resolution
+          </span>
+        ) : (
+          <CountdownTimer targetDate={resolution} compact />
+        )}
         <div className="flex items-center gap-1">
           <Coins className="h-3.5 w-3.5" />
           <span>{stakePoints ? `${stakePoints} pts` : "No stake"}</span>

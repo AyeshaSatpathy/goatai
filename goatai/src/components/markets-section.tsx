@@ -12,6 +12,7 @@ import { useAuth } from "@/components/auth-provider";
 import { TradeDialog } from "@/components/trade-dialog";
 import { Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { categoryList, type CategoryId, getCategoryById } from "@/lib/categories";
 
 type Market = {
   id: string;
@@ -20,6 +21,7 @@ type Market = {
   resolutionAt: string;
   stakePoints?: number | null;
   collegeId?: string | null;
+  category?: string | null;
   status: "OPEN" | "RESOLVED" | "CANCELED";
   outcomes: Array<{ id: string; label: string; position: number }>;
   totalPool?: number;
@@ -27,6 +29,7 @@ type Market = {
 };
 
 type StatusFilter = "ALL" | "OPEN" | "RESOLVED";
+type CategoryFilter = "ALL" | CategoryId;
 
 export function MarketsSection() {
   const { selectedCollege } = useCollege();
@@ -42,6 +45,7 @@ export function MarketsSection() {
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("ALL");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
   const collegeId = selectedCollege?.id;
@@ -62,6 +66,7 @@ export function MarketsSection() {
       const params = new URLSearchParams();
       if (collegeId) params.set("collegeId", collegeId);
       if (statusFilter !== "ALL") params.set("status", statusFilter);
+      if (categoryFilter !== "ALL") params.set("category", categoryFilter);
       if (debouncedSearch) params.set("search", debouncedSearch);
 
       const qs = params.toString() ? `?${params.toString()}` : "";
@@ -86,7 +91,7 @@ export function MarketsSection() {
     }
     loadMarkets();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [collegeId, statusFilter, debouncedSearch]);
+  }, [collegeId, statusFilter, categoryFilter, debouncedSearch]);
 
   const headerTitle = useMemo(() => {
     return selectedCollege ? `${selectedCollege.shortName} Markets` : "Markets";
@@ -168,6 +173,37 @@ export function MarketsSection() {
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Category Filter */}
+          {collegeId && (
+            <div className="mt-4 flex flex-wrap gap-2 justify-center">
+              <button
+                onClick={() => setCategoryFilter("ALL")}
+                className={cn(
+                  "px-3 py-1.5 text-sm font-medium rounded-full transition-colors",
+                  categoryFilter === "ALL"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:text-foreground"
+                )}
+              >
+                All Categories
+              </button>
+              {categoryList.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setCategoryFilter(cat.id as CategoryId)}
+                  className={cn(
+                    "px-3 py-1.5 text-sm font-medium rounded-full transition-colors",
+                    categoryFilter === cat.id
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {cat.emoji} {cat.label}
+                </button>
+              ))}
             </div>
           )}
         </div>

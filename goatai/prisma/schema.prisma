@@ -79,6 +79,16 @@ enum MarketStatus {
   CANCELED
 }
 
+enum MarketCategory {
+  SPORTS
+  ACADEMICS
+  CAMPUS_LIFE
+  ENTERTAINMENT
+  POLITICS
+  WEATHER
+  OTHER
+}
+
 // Prediction markets created by students
 model Market {
   id           String     @id @default(cuid())
@@ -90,6 +100,8 @@ model Market {
   stakePoints  Int?
   // Optional simple college identifier to scope markets (e.g. "stanford", "mit")
   collegeId    String?
+  // Category for filtering markets
+  category     MarketCategory?
   status       MarketStatus @default(OPEN)
   resolvedAt   DateTime?
   resolvedOutcomeId String?
@@ -109,6 +121,7 @@ model Market {
 
   @@index([creatorId])
   @@index([collegeId])
+  @@index([category])
 }
 
 model Outcome {

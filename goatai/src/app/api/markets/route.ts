@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { collegeIds } from "@/lib/colleges";
+import { categoryIds } from "@/lib/categories";
 import { checkRateLimit, rateLimits } from "@/lib/rate-limit";
 import { moderateMarket } from "@/lib/content-moderation";
 import { auditLog, getClientInfo } from "@/lib/audit-log";
@@ -11,6 +12,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const collegeId = searchParams.get("collegeId") || undefined;
     const statusParam = searchParams.get("status") || undefined;
+    const categoryParam = searchParams.get("category") || undefined;
     const search = searchParams.get("search") || undefined;
 
     // Validate status parameter
@@ -19,10 +21,16 @@ export async function GET(req: NextRequest) {
       ? (statusParam as typeof validStatuses[number])
       : undefined;
 
+    // Validate category parameter
+    const category = categoryParam && categoryIds.has(categoryParam as never)
+      ? categoryParam
+      : undefined;
+
     const markets = await prisma.market.findMany({
       where: {
         collegeId,
         ...(status && { status }),
+        ...(category && { category: category as never }),
         ...(search && {
           OR: [
             { title: { contains: search, mode: "insensitive" } },
@@ -121,6 +129,7 @@ export async function POST(req: NextRequest) {
       outcomes,
       stakePoints,
       collegeId,
+      category,
     }: {
       title: string;
       description: string;
@@ -128,6 +137,7 @@ export async function POST(req: NextRequest) {
       outcomes: string[];
       stakePoints?: number | null;
       collegeId?: string | null;
+      category?: string | null;
     } = body;
 
     // Validate required fields
@@ -183,6 +193,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Validate category if provided
+    if (category && !categoryIds.has(category as never)) {
+      return NextResponse.json(
+        { error: "Invalid category" },
+        { status: 400 }
+      );
+    }
+
     const resolutionDate = new Date(resolutionAt);
     if (Number.isNaN(resolutionDate.getTime())) {
       return NextResponse.json(
@@ -215,6 +233,7 @@ export async function POST(req: NextRequest) {
         resolutionAt: resolutionDate,
         stakePoints: stakePoints ?? null,
         collegeId: collegeId ?? null,
+        category: category as never ?? null,
         creatorId: user.id,
         outcomes: {
           create: outcomes.map((label, index) => ({

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { TradeDialog } from "@/components/trade-dialog";
 import { useAuth } from "@/components/auth-provider";
+import { CountdownTimer } from "@/components/countdown-timer";
+import { PriceHistoryChart } from "@/components/price-history-chart";
 import { cn } from "@/lib/utils";
 
 type Market = {
@@ -201,12 +203,23 @@ export function MarketDetail({ marketId }: { marketId: string }) {
                 Status: {market.status}
               </span>
               <span className="text-xs px-2.5 py-1 rounded-full bg-muted text-foreground">
-                Resolves: {resolutionLabel}
-              </span>
-              <span className="text-xs px-2.5 py-1 rounded-full bg-muted text-foreground">
                 Stake: {market.stakePoints ? `${market.stakePoints} karma` : "None"}
               </span>
             </div>
+
+            {/* Live Countdown Timer */}
+            {market.status === "OPEN" && (
+              <div className="mt-4 p-4 rounded-lg border border-border bg-muted/30">
+                <div className="text-xs text-muted-foreground mb-2">Time until resolution</div>
+                <CountdownTimer
+                  targetDate={new Date(market.resolutionAt)}
+                  onExpire={load}
+                />
+                <div className="text-xs text-muted-foreground mt-2">
+                  {resolutionLabel}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-2">
@@ -222,6 +235,9 @@ export function MarketDetail({ marketId }: { marketId: string }) {
             </Button>
           </div>
         </div>
+
+        {/* Price History Chart */}
+        <PriceHistoryChart marketId={marketId} />
 
         <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="rounded-xl border border-border bg-card p-6">

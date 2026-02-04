@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/components/auth-provider";
+import { categoryList, type CategoryId } from "@/lib/categories";
 
 type Props = {
   open: boolean;
@@ -23,6 +24,7 @@ export function CreateMarketDialog({ open, onOpenChange, collegeId, onCreated }:
   const [description, setDescription] = useState("");
   const [resolutionAt, setResolutionAt] = useState("");
   const [stakePoints, setStakePoints] = useState<string>("");
+  const [category, setCategory] = useState<CategoryId | "">("");
   const [outcomes, setOutcomes] = useState<string[]>(["Yes", "No"]);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,6 +41,7 @@ export function CreateMarketDialog({ open, onOpenChange, collegeId, onCreated }:
     setDescription("");
     setResolutionAt("");
     setStakePoints("");
+    setCategory("");
     setOutcomes(["Yes", "No"]);
     setError(null);
     setIsSubmitting(false);
@@ -75,6 +78,7 @@ export function CreateMarketDialog({ open, onOpenChange, collegeId, onCreated }:
           outcomes: cleanOutcomes,
           stakePoints: Number.isFinite(stake) ? stake : undefined,
           collegeId: collegeId ?? undefined,
+          category: category || undefined,
         }),
       });
 
@@ -134,6 +138,24 @@ export function CreateMarketDialog({ open, onOpenChange, collegeId, onCreated }:
               placeholder="Add helpful context, criteria for resolution, and any rules."
               disabled={!isAuthed || isSubmitting}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="market-category">Category</Label>
+            <select
+              id="market-category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value as CategoryId | "")}
+              disabled={!isAuthed || isSubmitting}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="">Select a category...</option>
+              {categoryList.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.emoji} {cat.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
