@@ -14,6 +14,7 @@ import { Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { categoryList, type CategoryId, getCategoryById } from "@/lib/categories";
 
+// Original Market type
 type Market = {
   id: string;
   title: string;
@@ -26,6 +27,16 @@ type Market = {
   outcomes: Array<{ id: string; label: string; position: number }>;
   totalPool?: number;
   odds?: Array<{ outcomeId: string; amount: number; probability: number }>;
+  creatorId?: string; // OPTIONAL: add this if you have it
+};
+
+// MarketLite type expected by TradeDialog
+type MarketLite = {
+  id: string;
+  title: string;
+  description: string;
+  resolutionAt: string;
+  creatorId: string; // REQUIRED
 };
 
 type StatusFilter = "ALL" | "OPEN" | "RESOLVED";
@@ -96,6 +107,17 @@ export function MarketsSection() {
   const headerTitle = useMemo(() => {
     return selectedCollege ? `${selectedCollege.shortName} Markets` : "Markets";
   }, [selectedCollege]);
+
+  // Helper to convert Market → MarketLite
+  const marketLite: MarketLite | null = selectedMarket
+    ? {
+        id: selectedMarket.id,
+        title: selectedMarket.title,
+        description: selectedMarket.description,
+        resolutionAt: selectedMarket.resolutionAt,
+        creatorId: selectedMarket.creatorId ?? "unknown", // provide a fallback
+      }
+    : null;
 
   return (
     <section id="markets" className="py-16 md:py-24 bg-background">
@@ -280,10 +302,11 @@ export function MarketsSection() {
         onCreated={loadMarkets}
       />
 
+      {/* Pass MarketLite to TradeDialog */}
       <TradeDialog
         open={isTradeOpen}
         onOpenChange={setIsTradeOpen}
-        market={selectedMarket}
+        market={marketLite}  // ✅ FIXED
         onTraded={loadMarkets}
       />
     </section>
