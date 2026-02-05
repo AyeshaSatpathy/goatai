@@ -185,10 +185,12 @@ export function MarketsSection() {
         ) : markets.length === 0 ? (
           <div className="text-center text-muted-foreground">No markets yet. {session?.user ? "Be the first to create one!" : "Sign in to create one."}</div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
             {markets.map((m) => (
-              <div key={m.id} className="space-y-2">
-                <MarketCard id={m.id} title={m.title} description={m.description} outcomes={m.outcomes} resolutionAt={m.resolutionAt} stakePoints={m.stakePoints ?? null} odds={m.odds} totalPool={m.totalPool} />
+              <div key={m.id} className="flex flex-col gap-2">
+                <div className="flex-1">
+                  <MarketCard id={m.id} title={m.title} description={m.description} outcomes={m.outcomes} resolutionAt={m.resolutionAt} stakePoints={m.stakePoints ?? null} odds={m.odds} totalPool={m.totalPool} />
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   <Link href={`/markets/${m.id}`}>
                     <Button variant="outline" className="w-full bg-transparent font-semibold">View</Button>

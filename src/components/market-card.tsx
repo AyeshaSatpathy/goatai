@@ -34,7 +34,7 @@ export function MarketCard({
   return (
     <div
       onClick={onClick}
-      className="group bg-card border border-border rounded-xl p-5 hover:border-primary/50 hover:shadow-lg transition-all cursor-pointer"
+      className="group bg-card border border-border rounded-xl p-5 hover:border-primary/50 hover:shadow-lg transition-all cursor-pointer h-full flex flex-col"
     >
       {isDetermined && (
         <div className="mb-3">
@@ -95,7 +95,7 @@ export function MarketCard({
         </div>
       )}
 
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
+      <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto">
         {isDetermined ? (
           <span className="text-amber-600 dark:text-amber-400 font-medium">
             Awaiting resolution
