@@ -32,6 +32,17 @@ type Market = {
 type StatusFilter = "ALL" | "OPEN" | "RESOLVED";
 type CategoryFilter = "ALL" | CategoryId;
 
+type MarketLite = {
+  id: string;
+  title: string;
+  description: string;
+  stakePoints?: number | null;
+  resolutionAt: string;
+  status: "OPEN" | "RESOLVED" | "CANCELED";
+  outcomes: Array<{ id: string; label: string }>;
+  creatorId: string;
+};
+
 export function MarketsSection() {
   const { selectedCollege } = useCollege();
   const { session } = useAuth();
@@ -91,14 +102,15 @@ export function MarketsSection() {
   }, [collegeId, statusFilter, categoryFilter, debouncedSearch]);
 
   const headerTitle = useMemo(() => selectedCollege ? `${selectedCollege.shortName} Markets` : "Markets", [selectedCollege]);
-
-  // ✅ Convert selectedMarket to the correct MarketLite
   const marketLite: MarketLite | null = selectedMarket
     ? {
         id: selectedMarket.id,
         title: selectedMarket.title,
         description: selectedMarket.description,
+        stakePoints: selectedMarket.stakePoints,
         resolutionAt: selectedMarket.resolutionAt,
+        status: selectedMarket.status,
+        outcomes: selectedMarket.outcomes.map(o => ({ id: o.id, label: o.label })),
         creatorId: selectedMarket.creatorId ?? "unknown",
       }
     : null;
