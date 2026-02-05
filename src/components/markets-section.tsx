@@ -9,7 +9,7 @@ import { useCollege } from "@/components/college-context";
 import Link from "next/link";
 import { CreateMarketDialog } from "@/components/create-market-dialog";
 import { useAuth } from "@/components/auth-provider";
-import { TradeDialog, type MarketLite } from "@/components/trade-dialog"; // ✅ import the correct MarketLite
+import { TradeDialog } from "@/components/trade-dialog";
 import { Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { categoryList, type CategoryId } from "@/lib/categories";
