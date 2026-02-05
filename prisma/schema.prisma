@@ -1,0 +1,169 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Better-Auth required tables
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  campusId      String?
+  karmaBalance  Int       @default(1000)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  markets       Market[]
+  positions     Position[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  userId    String
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  accountId         String
+  providerId        String
+  userId            String
+  accessToken       String?
+  idToken           String?
+  refreshToken      String?
+  accessTokenExpiresAt DateTime?
+  scope             String?
+  expiresAt         DateTime?
+  password          String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([identifier, value])
+}
+
+enum MarketStatus {
+  OPEN
+  RESOLVED
+  CANCELED
+}
+
+enum MarketCategory {
+  SPORTS
+  ACADEMICS
+  CAMPUS_LIFE
+  ENTERTAINMENT
+  POLITICS
+  WEATHER
+  OTHER
+}
+
+// Prediction markets created by students
+model Market {
+  id           String     @id @default(cuid())
+  title        String
+  description  String
+  // When the market will be resolved / graded
+  resolutionAt DateTime
+  // Optional virtual points or stakes associated with the market
+  stakePoints  Int?
+  // Optional simple college identifier to scope markets (e.g. "stanford", "mit")
+  collegeId    String?
+  // Category for filtering markets
+  category     MarketCategory?
+  status       MarketStatus @default(OPEN)
+  resolvedAt   DateTime?
+  resolvedOutcomeId String?
+  // Settlement audit fields (filled on resolution)
+  totalPool    Int?
+  winnerPool   Int?
+  payoutRemainder Int?
+
+  creatorId String
+  creator   User       @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  outcomes  Outcome[]
+  positions Position[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([creatorId])
+  @@index([collegeId])
+  @@index([category])
+}
+
+model Outcome {
+  id       String  @id @default(cuid())
+  label    String
+  // position lets us keep outcomes ordered (0,1 for Yes/No, etc.)
+  position Int
+
+  marketId String
+  market   Market  @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  positions Position[]
+
+  @@index([marketId])
+}
+
+enum PositionStatus {
+  OPEN
+  WON
+  LOST
+  REFUNDED
+}
+
+model Position {
+  id        String         @id @default(cuid())
+  amount    Int
+  status    PositionStatus @default(OPEN)
+  payout    Int?           // credited on resolve (odds-based)
+
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  marketId  String
+  market    Market         @relation(fields: [marketId], references: [id], onDelete: Cascade)
+
+  outcomeId String
+  outcome   Outcome        @relation(fields: [outcomeId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([marketId])
+  @@index([outcomeId])
+}
+
